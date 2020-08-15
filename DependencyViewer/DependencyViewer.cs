@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace DependencyViewer
 {
@@ -33,7 +34,7 @@ namespace DependencyViewer
         {
             foreach (var asm in _asmCollection.Values)
             {
-                if (asm.ReferencedAssembliesRaw == null || asm.ReferencedAssembliesRaw.Count() == 0)
+                if (asm.ReferencedAssembliesRaw == null || asm.ReferencedAssembliesRaw.Length == 0)
                     continue;
 
                 asm.AllResolved = true;
@@ -44,8 +45,8 @@ namespace DependencyViewer
                     if (refasm.Name == "WindowsBase") continue;
                     if (refasm.Name == "PresentationCore") continue;
                     if (refasm.Name == "PresentationFramework") continue;
-                    if (refasm.Name.StartsWith("System")) continue;
-                    if (refasm.Name.StartsWith("Microsoft")) continue;
+                    if (refasm.Name.StartsWith("System", StringComparison.InvariantCulture)) continue;
+                    if (refasm.Name.StartsWith("Microsoft", StringComparison.InvariantCulture)) continue;
 
                     byte[]? publicKeyToken = refasm.GetPublicKeyToken();
                     if (publicKeyToken != null && publicKeyToken.Length != 0)
@@ -115,7 +116,7 @@ namespace DependencyViewer
             PrintRow(headings, widths);
             PrintHorizontal(widths);
 
-            foreach (var asm in _asmCollection.Values.Where(i => !i.ParentAssemblies.Any() || i.File.EndsWith("exe")))
+            foreach (var asm in _asmCollection.Values.Where(i => !i.ParentAssemblies.Any() || i.File.EndsWith("exe", StringComparison.InvariantCulture)))
                 PrintAssembly(asm, 0, widths);
 
             PrintHorizontal(widths);
@@ -123,7 +124,8 @@ namespace DependencyViewer
 
         private void PrintAssembly(AssemblyInformation asm, int level, int[] widths)
         {
-            if (asm.Location.StartsWith(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory()))
+            var runtimeDirectory = RuntimeEnvironment.GetRuntimeDirectory();
+            if (asm.Location.StartsWith(runtimeDirectory, StringComparison.InvariantCulture))
                 return;
 
             string name = "".PadRight(level) + asm.Name;
@@ -152,7 +154,7 @@ namespace DependencyViewer
         private static void PrintRow(string[] headings, int[] widths)
         {
             string headers = string.Empty;
-            for (int i = 0; i < widths.Count(); i++)
+            for (int i = 0; i < widths.Length; i++)
                 headers += "| " + headings[i].PadRight(widths[i] + 1).Substring(0, widths[i] + 1);
             headers += "|";
             Console.WriteLine(headers);
@@ -164,7 +166,7 @@ namespace DependencyViewer
                 return;
 
             string header = string.Empty;
-            for (int i = 0; i < widths.Count(); i++)
+            for (int i = 0; i < widths.Length; i++)
                 header += "+".PadRight(widths[i] + 3, '-');
             header += "+";
 
