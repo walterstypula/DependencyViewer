@@ -12,8 +12,8 @@ This console application will
  
 ## Useage
 
-    DepView <root path>
-where [root Path] is the root directory of the .NET assemblies to look through.
+    DepView -f <root path>
+where \<root Path\> is the root directory of the .NET assemblies to look through.
   
 All files with a DLL and EXE extension will be considered, and sub paths will be searched.
     
