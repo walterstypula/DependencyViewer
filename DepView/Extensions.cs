@@ -1,4 +1,4 @@
-﻿namespace DependencyViewer
+﻿namespace DepView
 {
     public static class Extensions
     {

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace DependencyViewer
+namespace DepView
 {
     public class DependencyViewer
     {

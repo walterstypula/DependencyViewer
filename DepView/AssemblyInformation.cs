@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace DependencyViewer
+namespace DepView
 {
     /// <summary>
     /// Provides a collection of information that might be useful to know about a .NET assembly
