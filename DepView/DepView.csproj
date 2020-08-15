@@ -5,6 +5,7 @@
     <AssemblyName>DependencyViewer</AssemblyName>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>nullable</WarningsAsErrors>
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
