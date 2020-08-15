@@ -9,7 +9,7 @@ namespace DependencyViewer
 {
     public class DependencyViewer
     {
-        private readonly Dictionary<string, AssemblyInformation> AsmCollection = new Dictionary<string, AssemblyInformation>();
+        private readonly Dictionary<string, AssemblyInformation> _asmCollection = new Dictionary<string, AssemblyInformation>();
 
         public DependencyViewer(string root)
         {
@@ -31,7 +31,7 @@ namespace DependencyViewer
 
         private void FindRelationships()
         {
-            foreach (var asm in AsmCollection.Values)
+            foreach (var asm in _asmCollection.Values)
             {
                 if (asm.ReferencedAssembliesRaw == null || asm.ReferencedAssembliesRaw.Count() == 0)
                     continue;
@@ -50,7 +50,7 @@ namespace DependencyViewer
                     byte[]? publicKeyToken = refasm.GetPublicKeyToken();
                     if (publicKeyToken != null && publicKeyToken.Length != 0)
                     {
-                        var found = AsmCollection.Values.FirstOrDefault(i => i.Name == refasm.Name && i.VersionAsm == refasm.Version?.ToString());
+                        var found = _asmCollection.Values.FirstOrDefault(i => i.Name == refasm.Name && i.VersionAsm == refasm.Version?.ToString());
                         if (found == null)
                         {
                             asm.AllResolved = false;
@@ -63,7 +63,7 @@ namespace DependencyViewer
                     }
                     else
                     {
-                        var found = AsmCollection.Values.FirstOrDefault(i => i.Name == refasm.Name);
+                        var found = _asmCollection.Values.FirstOrDefault(i => i.Name == refasm.Name);
                         if (found == null)
                         {
                             asm.AllResolved = false;
@@ -83,7 +83,7 @@ namespace DependencyViewer
 
         public void DrawTable()
         {
-            if (AsmCollection.Count == 0)
+            if (_asmCollection.Count == 0)
             {
                 Console.WriteLine("There are no assemblies to print.");
                 return;
@@ -101,21 +101,21 @@ namespace DependencyViewer
             };
 
             int[] widths = {
-                AsmCollection.Values.Max(info => info.Name.Length) + 8, /* padding for indents */
-                AsmCollection.Values.Max(info => info.VersionAsm.Length),
-                AsmCollection.Values.Max(info => info.VersionFile.Length),
-                AsmCollection.Values.Max(info => info.VersionProduct.Length),
-                AsmCollection.Values.Max(info => info.Arch.Length),
+                _asmCollection.Values.Max(info => info.Name.Length) + 8, /* padding for indents */
+                _asmCollection.Values.Max(info => info.VersionAsm.Length),
+                _asmCollection.Values.Max(info => info.VersionFile.Length),
+                _asmCollection.Values.Max(info => info.VersionProduct.Length),
+                _asmCollection.Values.Max(info => info.Arch.Length),
                 headings[5].Length,
                 headings[6].Length,
-                Math.Max(headings[7].Length, AsmCollection.Values.Max(info => info.ResolvedNote.Length))
+                Math.Max(headings[7].Length, _asmCollection.Values.Max(info => info.ResolvedNote.Length))
             };
 
             PrintHorizontal(widths);
             PrintRow(headings, widths);
             PrintHorizontal(widths);
 
-            foreach (var asm in AsmCollection.Values.Where(i => !i.ParentAssemblies.Any() || i.File.EndsWith("exe")))
+            foreach (var asm in _asmCollection.Values.Where(i => !i.ParentAssemblies.Any() || i.File.EndsWith("exe")))
                 PrintAssembly(asm, 0, widths);
 
             PrintHorizontal(widths);
@@ -140,7 +140,7 @@ namespace DependencyViewer
                 asm.Arch,
                 asm.StronglySigned ? "Signed" : string.Empty,
                 asm.DotNetAssembly ? (asm.AllResolved ? "Yes" : "No") : string.IsNullOrEmpty(asm.Location) ? string.Empty : "(N/A)",
-                AsmCollection.Values.Where(i => i.Name == asm.Name).Count() > 1 ? "Dupe Asm" : string.IsNullOrEmpty(asm.Location) ? "Not Found" : asm.ResolvedNote,
+                _asmCollection.Values.Where(i => i.Name == asm.Name).Count() > 1 ? "Dupe Asm" : string.IsNullOrEmpty(asm.Location) ? "Not Found" : asm.ResolvedNote,
             };
 
             PrintRow(values, widths);
@@ -149,7 +149,7 @@ namespace DependencyViewer
                 PrintAssembly(refasm, level + 1, widths);
         }
 
-        public static void PrintRow(string[] headings, int[] widths)
+        private static void PrintRow(string[] headings, int[] widths)
         {
             string headers = string.Empty;
             for (int i = 0; i < widths.Count(); i++)
@@ -200,8 +200,8 @@ namespace DependencyViewer
                 var asm = Assembly.LoadFrom(file);
                 info.ReferencedAssembliesRaw = asm.GetReferencedAssemblies();
 
-                if (!AsmCollection.Keys.Contains(assemblyName.FullName))
-                    AsmCollection.Add(assemblyName.FullName, info);
+                if (!_asmCollection.Keys.Contains(assemblyName.FullName))
+                    _asmCollection.Add(assemblyName.FullName, info);
             }
             catch (FileLoadException)
             {
@@ -213,8 +213,8 @@ namespace DependencyViewer
                 info.Arch = assemblyName.ProcessorArchitecture.ToString();
                 info.ResolvedNote = "Unable to load";
 
-                if (!AsmCollection.Keys.Contains(assemblyName.FullName))
-                    AsmCollection.Add(assemblyName.FullName, info);
+                if (!_asmCollection.Keys.Contains(assemblyName.FullName))
+                    _asmCollection.Add(assemblyName.FullName, info);
             }
             catch (BadImageFormatException)
             {
@@ -222,8 +222,8 @@ namespace DependencyViewer
                 info.Name = Path.GetFileName(file);
                 info.VersionAsm = string.Empty;
 
-                if (!AsmCollection.Keys.Contains(file))
-                    AsmCollection.Add(file, info);
+                if (!_asmCollection.Keys.Contains(file))
+                    _asmCollection.Add(file, info);
             }
             catch (Exception)
             { }

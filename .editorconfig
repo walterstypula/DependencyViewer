@@ -1,0 +1,94 @@
+﻿# This file configures the VS editor for project wide properties
+
+root = true
+
+[*.cs]
+# Naming styles
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+dotnet_naming_style.camel_case_style.capitalization = camel_case
+
+dotnet_naming_style.underscore_camel_case_style.capitalization = camel_case
+dotnet_naming_style.underscore_camel_case_style.required_prefix = _
+
+dotnet_naming_style.interface_pascal_case.capitalization = pascal_case
+dotnet_naming_style.interface_pascal_case.required_prefix = I
+
+
+# Constants are to be styles as PascalCase
+dotnet_naming_rule.constants_pascal_cased.symbols = constant_symbols
+
+dotnet_naming_symbols.constant_symbols.applicable_kinds = field
+dotnet_naming_symbols.constant_symbols.applicable_accessibilities = *
+dotnet_naming_symbols.constant_symbols.required_modifiers = const
+
+dotnet_naming_rule.constants_pascal_cased.style = pascal_case_style
+dotnet_naming_rule.constants_pascal_cased.severity = suggestion
+
+# Public members are to be styled as PascalCase
+dotnet_naming_rule.public_members_pascal_cased.symbols = public_symbols
+
+dotnet_naming_symbols.public_symbols.applicable_kinds = property, method, event, field
+dotnet_naming_symbols.public_symbols.applicable_accessibilities = public, internal
+
+dotnet_naming_rule.public_members_pascal_cased.style = pascal_case_style
+dotnet_naming_rule.public_members_pascal_cased.severity = suggestion
+
+# Protected members are to be styles as camelCase
+dotnet_naming_rule.protected_members_pascal_cased.symbols = protected_symbols
+
+dotnet_naming_symbols.protected_symbols.applicable_kinds = event, field
+dotnet_naming_symbols.protected_symbols.applicable_accessibilities = protected
+
+dotnet_naming_rule.protected_members_pascal_cased.style = camel_case_style
+dotnet_naming_rule.protected_members_pascal_cased.severity = suggestion
+
+# Private fields are to be styled as _camelCase
+dotnet_naming_rule.private_fields_camel_cased.symbols = private_field_symbols
+
+dotnet_naming_symbols.private_field_symbols.applicable_kinds = field, event
+dotnet_naming_symbols.private_field_symbols.applicable_accessibilities = private
+
+dotnet_naming_rule.private_fields_camel_cased.style = underscore_camel_case_style
+dotnet_naming_rule.private_fields_camel_cased.severity = suggestion
+
+# Interfaces are prefaces with 'I'
+dotnet_naming_rule.interfaces_begins_with_i.symbols = interface_symbols
+
+dotnet_naming_symbols.interface_symbols.applicable_kinds = interface
+dotnet_naming_symbols.interface_symbols.applicable_accessibilities = *
+
+dotnet_naming_rule.interfaces_begins_with_i.style = interface_pascal_case
+dotnet_naming_rule.interfaces_begins_with_i.severity = suggestion
+
+# CA1303: Do not pass literals as localized parameters
+dotnet_diagnostic.CA1303.severity = none
+
+# CA1812 Internal class is never instantiated
+dotnet_diagnostic.CA1812.severity = none
+
+# CA1822 Mark member as static
+dotnet_diagnostic.CA1822.severity = none
+
+# CA1716: Identifiers should not match keywords
+dotnet_diagnostic.CA1716.severity = none
+
+# CA1032: Implement standard exception constructors
+dotnet_diagnostic.CA1032.severity = none
+
+# CA1030: Use events where appropriate
+dotnet_diagnostic.CA1030.severity = none
+
+# CA2000: Dispose objects before losing scope
+dotnet_diagnostic.CA2000.severity = none
+
+# CA1062: Validate arguments of public methods
+dotnet_diagnostic.CA1062.severity = warning
+
+# CA2227: Collection properties should be read only
+dotnet_diagnostic.CA2227.severity = none
+
+# CA2214: Do not call overridable methods in constructors
+dotnet_diagnostic.CA2214.severity = none
+
+# CS0067: Event is never used
+dotnet_diagnostic.CS0067.severity = none
