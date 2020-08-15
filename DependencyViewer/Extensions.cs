@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace DependencyViewer
+﻿namespace DependencyViewer
 {
     public static class Extensions
     {
@@ -12,7 +6,8 @@ namespace DependencyViewer
         {
             while (str.Length < length)
                 str += padding;
-            return str.Substring(0,length);
+
+            return str.Substring(0, length);
         }
     }
 }

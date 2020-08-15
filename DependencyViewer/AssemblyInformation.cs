@@ -1,32 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DependencyViewer
 {
     /// <summary>
     /// Provides a collection of information that might be useful to know about a .NET assembly
     /// </summary>
-    class AssemblyInformation
+    internal class AssemblyInformation
     {
-        public string Name = string.Empty;
-        public string File = string.Empty;
-        public string PublicKey = string.Empty;
-        public string VersionAsm = string.Empty;
-        public string VersionFile = string.Empty;
-        public string VersionProduct = string.Empty;
-        public string Location = string.Empty;
-        public string Arch = string.Empty;
-        public bool DotNetAssembly;
-        public AssemblyName[] ReferencedAssembliesRaw;
-        public List<AssemblyInformation> ChildAssemblies = new List<AssemblyInformation>();
-        public List<AssemblyInformation> ParentAssemblies = new List<AssemblyInformation>();
-        public bool AllResolved = false;
-        public bool StronglySigned = false;
-        public string ResolvedNote = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string File { get; set; } = string.Empty;
+        public string PublicKey { get; set; } = string.Empty;
+        public string VersionAsm { get; set; } = string.Empty;
+        public string VersionFile { get; set; } = string.Empty;
+        public string VersionProduct { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public string Arch { get; set; } = string.Empty;
+        public bool DotNetAssembly { get; set; }
+        public AssemblyName[] ReferencedAssembliesRaw { get; set; } = Array.Empty<AssemblyName>();
+        public List<AssemblyInformation> ChildAssemblies { get; } = new List<AssemblyInformation>();
+        public List<AssemblyInformation> ParentAssemblies { get; } = new List<AssemblyInformation>();
+        public bool AllResolved { get; set; } = false;
+        public bool StronglySigned { get; set; } = false;
+        public string ResolvedNote { get; set; } = string.Empty;
     }
-
 }

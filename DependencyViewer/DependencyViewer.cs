@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.IO;
-using System.Threading.Tasks;
-using System.Diagnostics;
 
 namespace DependencyViewer
 {
     public class DependencyViewer
     {
-        private Dictionary<string, AssemblyInformation> AsmCollection = new Dictionary<string, AssemblyInformation>();
-        private string[] Files = { };
+        private readonly Dictionary<string, AssemblyInformation> AsmCollection = new Dictionary<string, AssemblyInformation>();
 
         public DependencyViewer(string root)
         {
@@ -21,9 +18,7 @@ namespace DependencyViewer
                 string[] dlls = Directory.GetFiles(root, "*.dll", SearchOption.AllDirectories);
                 string[] exes = Directory.GetFiles(root, "*.exe", SearchOption.AllDirectories);
 
-                Files = dlls.Concat(exes).ToArray();
-
-                foreach (var file in Files)
+                foreach (var file in dlls.Concat(exes))
                     GatherInformation(file);
 
                 FindRelationships();
@@ -33,7 +28,6 @@ namespace DependencyViewer
                 Console.WriteLine("One of the paths is inaccessable: " + ex.Message);
             }
         }
-
 
         private void FindRelationships()
         {
@@ -45,6 +39,7 @@ namespace DependencyViewer
                 asm.AllResolved = true;
                 foreach (var refasm in asm.ReferencedAssembliesRaw)
                 {
+                    if (refasm.Name is null) continue;
                     if (refasm.Name == "mscorlib") continue;
                     if (refasm.Name == "WindowsBase") continue;
                     if (refasm.Name == "PresentationCore") continue;
@@ -52,13 +47,14 @@ namespace DependencyViewer
                     if (refasm.Name.StartsWith("System")) continue;
                     if (refasm.Name.StartsWith("Microsoft")) continue;
 
-                    if (refasm.GetPublicKeyToken().Length != 0)
+                    byte[]? publicKeyToken = refasm.GetPublicKeyToken();
+                    if (publicKeyToken != null && publicKeyToken.Length != 0)
                     {
-                        var found = AsmCollection.Values.FirstOrDefault(i => i.Name == refasm.Name && i.VersionAsm == refasm.Version.ToString());
+                        var found = AsmCollection.Values.FirstOrDefault(i => i.Name == refasm.Name && i.VersionAsm == refasm.Version?.ToString());
                         if (found == null)
                         {
                             asm.AllResolved = false;
-                            asm.ChildAssemblies.Add(new AssemblyInformation() { Name = refasm.Name, VersionAsm = refasm.Version.ToString() });
+                            asm.ChildAssemblies.Add(new AssemblyInformation() { Name = refasm.Name, VersionAsm = refasm.Version?.ToString() ?? string.Empty });
                             continue;
                         }
 
@@ -71,12 +67,12 @@ namespace DependencyViewer
                         if (found == null)
                         {
                             asm.AllResolved = false;
-                            asm.ChildAssemblies.Add(new AssemblyInformation() { Name = refasm.Name, VersionAsm = refasm.Version.ToString() });
+                            asm.ChildAssemblies.Add(new AssemblyInformation() { Name = refasm.Name, VersionAsm = refasm.Version?.ToString() ?? string.Empty });
                             continue;
                         }
 
-                        if (refasm.Version.ToString() != found.VersionAsm)
-                            asm.ResolvedNote += refasm.Version.ToString() + " -> " + found.VersionAsm;
+                        if (refasm.Version?.ToString() != found.VersionAsm)
+                            asm.ResolvedNote += refasm.Version?.ToString() + " -> " + found.VersionAsm;
 
                         asm.ChildAssemblies.Add(found);
                         found.ParentAssemblies.Add(asm);
@@ -133,7 +129,7 @@ namespace DependencyViewer
             string name = "".PadRight(level) + asm.Name;
             if (level > 0)
             {
-                name = " ".PadRight(level*"|  ".Length-2, "|  ") + "\\-" + asm.Name;
+                name = " ".PadRight(level * "|  ".Length - 2, "|  ") + "\\-" + asm.Name;
             }
 
             string[] values = {
@@ -153,7 +149,7 @@ namespace DependencyViewer
                 PrintAssembly(refasm, level + 1, widths);
         }
 
-        public void PrintRow(string[] headings, int[] widths)
+        public static void PrintRow(string[] headings, int[] widths)
         {
             string headers = string.Empty;
             for (int i = 0; i < widths.Count(); i++)
@@ -162,7 +158,7 @@ namespace DependencyViewer
             Console.WriteLine(headers);
         }
 
-        public void PrintHorizontal(int[] widths)
+        public static void PrintHorizontal(int[] widths)
         {
             if (widths == null)
                 return;
@@ -183,36 +179,42 @@ namespace DependencyViewer
                 return;
             }
 
-            var info = new AssemblyInformation();
-            info.Location = Path.GetDirectoryName(file) + Path.DirectorySeparatorChar;
-            info.File = Path.GetFileName(file);
-            info.VersionProduct = FileVersionInfo.GetVersionInfo(file).ProductVersion ?? string.Empty;
-            info.VersionFile = FileVersionInfo.GetVersionInfo(file).FileVersion ?? string.Empty;
+            var info = new AssemblyInformation
+            {
+                Location = Path.GetDirectoryName(file) + Path.DirectorySeparatorChar,
+                File = Path.GetFileName(file),
+                VersionProduct = FileVersionInfo.GetVersionInfo(file).ProductVersion ?? string.Empty,
+                VersionFile = FileVersionInfo.GetVersionInfo(file).FileVersion ?? string.Empty
+            };
 
             try
             {
+                var assemblyName = AssemblyName.GetAssemblyName(file);
+
                 info.DotNetAssembly = true;
-                info.VersionAsm = AssemblyName.GetAssemblyName(file).Version.ToString();
-                info.Name = AssemblyName.GetAssemblyName(file).Name;
-                info.StronglySigned = AssemblyName.GetAssemblyName(file).GetPublicKeyToken().Length != 0;
-                info.Arch = AssemblyName.GetAssemblyName(file).ProcessorArchitecture.ToString();
+                info.VersionAsm = assemblyName.Version?.ToString() ?? string.Empty;
+                info.Name = assemblyName.Name ?? string.Empty;
+                info.StronglySigned = assemblyName.GetPublicKeyToken()?.Length != 0;
+                info.Arch = assemblyName.ProcessorArchitecture.ToString();
 
                 var asm = Assembly.LoadFrom(file);
                 info.ReferencedAssembliesRaw = asm.GetReferencedAssemblies();
 
-                if (!AsmCollection.Keys.Contains(AssemblyName.GetAssemblyName(file).FullName))
-                    AsmCollection.Add(AssemblyName.GetAssemblyName(file).FullName, info);
+                if (!AsmCollection.Keys.Contains(assemblyName.FullName))
+                    AsmCollection.Add(assemblyName.FullName, info);
             }
             catch (FileLoadException)
             {
-                info.VersionAsm = AssemblyName.GetAssemblyName(file).Version.ToString();
-                info.Name = AssemblyName.GetAssemblyName(file).Name;
-                info.StronglySigned = AssemblyName.GetAssemblyName(file).GetPublicKeyToken().Length != 0;
-                info.Arch = AssemblyName.GetAssemblyName(file).ProcessorArchitecture.ToString();
+                var assemblyName = AssemblyName.GetAssemblyName(file);
+
+                info.VersionAsm = assemblyName.Version?.ToString() ?? string.Empty;
+                info.Name = assemblyName.Name ?? string.Empty;
+                info.StronglySigned = assemblyName.GetPublicKeyToken()?.Length != 0;
+                info.Arch = assemblyName.ProcessorArchitecture.ToString();
                 info.ResolvedNote = "Unable to load";
 
-                if (!AsmCollection.Keys.Contains(AssemblyName.GetAssemblyName(file).FullName))
-                    AsmCollection.Add(AssemblyName.GetAssemblyName(file).FullName, info);
+                if (!AsmCollection.Keys.Contains(assemblyName.FullName))
+                    AsmCollection.Add(assemblyName.FullName, info);
             }
             catch (BadImageFormatException)
             {
