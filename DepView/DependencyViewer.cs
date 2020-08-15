@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace DepView
 {
-    public class DependencyViewer
+    public sealed class DependencyViewer
     {
         private readonly Dictionary<string, AssemblyInformation> _asmCollection = new Dictionary<string, AssemblyInformation>();
 
@@ -26,8 +26,112 @@ namespace DepView
             }
             catch (UnauthorizedAccessException ex)
             {
-                Console.WriteLine("One of the paths is inaccessable: " + ex.Message);
+                throw new DependencyViewerException("One of the paths is inaccessable.", ex);
             }
+            catch (Exception ex)
+            {
+                throw new DependencyViewerException("An unexpected exception was thrown.", ex);
+            }
+        }
+
+        #region Methods
+
+        public void WriteToStream(Stream stream)
+        {
+            using var writer = new StreamWriter(stream);
+
+            if (_asmCollection.Count == 0)
+            {
+                writer.WriteLine("There are no assemblies to print.");
+                return;
+            }
+
+            string[] headings = {
+                "Assembly Name",
+                "Ver Asm",
+                "Ver File",
+                "Ver Prod",
+                "", // Architecture
+                "Signed",
+                "Resolved",
+                "Possible Issue",
+            };
+
+            int[] widths = {
+                _asmCollection.Values.Max(info => info.Name.Length) + 8, /* padding for indents */
+                _asmCollection.Values.Max(info => info.VersionAsm.Length),
+                _asmCollection.Values.Max(info => info.VersionFile.Length),
+                _asmCollection.Values.Max(info => info.VersionProduct.Length),
+                _asmCollection.Values.Max(info => info.Arch.Length),
+                headings[5].Length,
+                headings[6].Length,
+                Math.Max(headings[7].Length, _asmCollection.Values.Max(info => info.ResolvedNote.Length))
+            };
+
+            PrintHorizontal(writer, widths);
+            PrintRow(writer, headings, widths);
+            PrintHorizontal(writer, widths);
+
+            foreach (var asm in _asmCollection.Values.Where(i => !i.ParentAssemblies.Any() || i.File.EndsWith("exe", StringComparison.InvariantCulture)))
+                PrintAssembly(writer, asm, 0, widths);
+
+            PrintHorizontal(writer, widths);
+        }
+
+        #endregion Methods
+
+        #region Private methods
+
+        private void GatherInformation(string file)
+        {
+            var info = new AssemblyInformation
+            {
+                Location = Path.GetDirectoryName(file) + Path.DirectorySeparatorChar,
+                File = Path.GetFileName(file),
+                VersionProduct = FileVersionInfo.GetVersionInfo(file).ProductVersion ?? string.Empty,
+                VersionFile = FileVersionInfo.GetVersionInfo(file).FileVersion ?? string.Empty
+            };
+
+            try
+            {
+                var assemblyName = AssemblyName.GetAssemblyName(file);
+
+                info.DotNetAssembly = true;
+                info.VersionAsm = assemblyName.Version?.ToString() ?? string.Empty;
+                info.Name = assemblyName.Name ?? string.Empty;
+                info.StronglySigned = assemblyName.GetPublicKeyToken()?.Length != 0;
+                info.Arch = assemblyName.ProcessorArchitecture.ToString();
+
+                var asm = Assembly.LoadFrom(file);
+                info.ReferencedAssembliesRaw = asm.GetReferencedAssemblies();
+
+                if (!_asmCollection.Keys.Contains(assemblyName.FullName))
+                    _asmCollection.Add(assemblyName.FullName, info);
+            }
+            catch (FileLoadException)
+            {
+                var assemblyName = AssemblyName.GetAssemblyName(file);
+
+                info.VersionAsm = assemblyName.Version?.ToString() ?? string.Empty;
+                info.Name = assemblyName.Name ?? string.Empty;
+                info.StronglySigned = assemblyName.GetPublicKeyToken()?.Length != 0;
+                info.Arch = assemblyName.ProcessorArchitecture.ToString();
+                info.ResolvedNote = "Unable to load";
+
+                if (!_asmCollection.Keys.Contains(assemblyName.FullName))
+                    _asmCollection.Add(assemblyName.FullName, info);
+            }
+            catch (BadImageFormatException)
+            {
+                info.DotNetAssembly = false;
+                info.Name = Path.GetFileName(file);
+                info.VersionAsm = string.Empty;
+
+                if (!_asmCollection.Keys.Contains(file))
+                    _asmCollection.Add(file, info);
+            }
+            catch (Exception)
+            { }
         }
 
         private void FindRelationships()
@@ -82,47 +186,11 @@ namespace DepView
             }
         }
 
-        public void DrawTable()
-        {
-            if (_asmCollection.Count == 0)
-            {
-                Console.WriteLine("There are no assemblies to print.");
-                return;
-            }
+        #endregion Private methods
 
-            string[] headings = {
-                "Assembly Name",
-                "Ver Asm",
-                "Ver File",
-                "Ver Prod",
-                "", // Architecture
-                "Signed",
-                "Resolved",
-                "Possible Issue",
-            };
+        #region Print
 
-            int[] widths = {
-                _asmCollection.Values.Max(info => info.Name.Length) + 8, /* padding for indents */
-                _asmCollection.Values.Max(info => info.VersionAsm.Length),
-                _asmCollection.Values.Max(info => info.VersionFile.Length),
-                _asmCollection.Values.Max(info => info.VersionProduct.Length),
-                _asmCollection.Values.Max(info => info.Arch.Length),
-                headings[5].Length,
-                headings[6].Length,
-                Math.Max(headings[7].Length, _asmCollection.Values.Max(info => info.ResolvedNote.Length))
-            };
-
-            PrintHorizontal(widths);
-            PrintRow(headings, widths);
-            PrintHorizontal(widths);
-
-            foreach (var asm in _asmCollection.Values.Where(i => !i.ParentAssemblies.Any() || i.File.EndsWith("exe", StringComparison.InvariantCulture)))
-                PrintAssembly(asm, 0, widths);
-
-            PrintHorizontal(widths);
-        }
-
-        private void PrintAssembly(AssemblyInformation asm, int level, int[] widths)
+        private void PrintAssembly(StreamWriter writer, AssemblyInformation asm, int level, int[] widths)
         {
             var runtimeDirectory = RuntimeEnvironment.GetRuntimeDirectory();
             if (asm.Location.StartsWith(runtimeDirectory, StringComparison.InvariantCulture))
@@ -145,22 +213,22 @@ namespace DepView
                 _asmCollection.Values.Where(i => i.Name == asm.Name).Count() > 1 ? "Dupe Asm" : string.IsNullOrEmpty(asm.Location) ? "Not Found" : asm.ResolvedNote,
             };
 
-            PrintRow(values, widths);
+            PrintRow(writer, values, widths);
 
             foreach (var refasm in asm.ChildAssemblies)
-                PrintAssembly(refasm, level + 1, widths);
+                PrintAssembly(writer, refasm, level + 1, widths);
         }
 
-        private static void PrintRow(string[] headings, int[] widths)
+        private static void PrintRow(StreamWriter writer, string[] headings, int[] widths)
         {
             string headers = string.Empty;
             for (int i = 0; i < widths.Length; i++)
                 headers += "| " + headings[i].PadRight(widths[i] + 1).Substring(0, widths[i] + 1);
             headers += "|";
-            Console.WriteLine(headers);
+            writer.WriteLine(headers);
         }
 
-        public static void PrintHorizontal(int[] widths)
+        private static void PrintHorizontal(StreamWriter writer, int[] widths)
         {
             if (widths == null)
                 return;
@@ -170,65 +238,9 @@ namespace DepView
                 header += "+".PadRight(widths[i] + 3, '-');
             header += "+";
 
-            Console.WriteLine(header);
+            writer.WriteLine(header);
         }
 
-        public void GatherInformation(string file)
-        {
-            if (!File.Exists(file))
-            {
-                Console.WriteLine("File does not exist: " + file);
-                return;
-            }
-
-            var info = new AssemblyInformation
-            {
-                Location = Path.GetDirectoryName(file) + Path.DirectorySeparatorChar,
-                File = Path.GetFileName(file),
-                VersionProduct = FileVersionInfo.GetVersionInfo(file).ProductVersion ?? string.Empty,
-                VersionFile = FileVersionInfo.GetVersionInfo(file).FileVersion ?? string.Empty
-            };
-
-            try
-            {
-                var assemblyName = AssemblyName.GetAssemblyName(file);
-
-                info.DotNetAssembly = true;
-                info.VersionAsm = assemblyName.Version?.ToString() ?? string.Empty;
-                info.Name = assemblyName.Name ?? string.Empty;
-                info.StronglySigned = assemblyName.GetPublicKeyToken()?.Length != 0;
-                info.Arch = assemblyName.ProcessorArchitecture.ToString();
-
-                var asm = Assembly.LoadFrom(file);
-                info.ReferencedAssembliesRaw = asm.GetReferencedAssemblies();
-
-                if (!_asmCollection.Keys.Contains(assemblyName.FullName))
-                    _asmCollection.Add(assemblyName.FullName, info);
-            }
-            catch (FileLoadException)
-            {
-                var assemblyName = AssemblyName.GetAssemblyName(file);
-
-                info.VersionAsm = assemblyName.Version?.ToString() ?? string.Empty;
-                info.Name = assemblyName.Name ?? string.Empty;
-                info.StronglySigned = assemblyName.GetPublicKeyToken()?.Length != 0;
-                info.Arch = assemblyName.ProcessorArchitecture.ToString();
-                info.ResolvedNote = "Unable to load";
-
-                if (!_asmCollection.Keys.Contains(assemblyName.FullName))
-                    _asmCollection.Add(assemblyName.FullName, info);
-            }
-            catch (BadImageFormatException)
-            {
-                info.DotNetAssembly = false;
-                info.Name = Path.GetFileName(file);
-                info.VersionAsm = string.Empty;
-
-                if (!_asmCollection.Keys.Contains(file))
-                    _asmCollection.Add(file, info);
-            }
-            catch (Exception)
-            { }
-        }
+        #endregion Print
     }
 }
