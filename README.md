@@ -1,23 +1,23 @@
-# Dependency Viewer
-Helps find those run-time assembly issues by generating a simple dependency graph
+# DependencyViewer
 
-Summary
-------------
+Helps find those run-time assembly issues
+
+## Summary
+
 This console application will
  - Visually show assembly relationships
  - List assembly versions
  - List missing assemblies
  - Indicate likely assembly binding redirect
  
-Usage
-----------------
+## Useage
+
     DepView <root path>
-  where [root Path] is the root directory of the .NET assemblies to look through.
+where [root Path] is the root directory of the .NET assemblies to look through.
   
-  All files with a DLL and EXE extension will be considered, and sub paths will be searched.
+All files with a DLL and EXE extension will be considered, and sub paths will be searched.
     
-Example Output
----------------------
+## Example Output
 
 	+------------------------------------------------+------------------+------------------+------------------+-------+--------+----------+--------------------------------------+
 	| Assembly Name                                  | Ver Asm          | Ver File         | Ver Prod         |       | Signed | Resolved | Possible Issue                       |
