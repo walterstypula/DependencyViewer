@@ -6,10 +6,10 @@ namespace DepView.CLI
 {
     public sealed class Options
     {
-        [Option('f', "file", Required = true, HelpText = "The root directory of the .NET assemblies to look through.")]
-        public string File { get; set; } = string.Empty;
+        [Option('f', "file", HelpText = "The root directory of the .NET assemblies to look through. If not specified, the current working directory is used.")]
+        public string? File { get; set; }
 
-        [Option('o', "output-file", HelpText = "Optional. A file to write the output to. If not specified, the output will be written to the console.")]
+        [Option('o', "output-file", HelpText = "A file to write the output to. If not specified, the output will be written to the console.")]
         public string? OutputFile { get; set; }
     }
 
@@ -23,13 +23,14 @@ namespace DepView.CLI
 
         private static void Run(Options options)
         {
-            if (!Directory.Exists(options.File))
+            if (options.File is not null && !Directory.Exists(options.File))
             {
                 ConsoleExt.WriteError($"Parameter '{options.File}' does not exist or is not a directory.");
                 return;
             }
 
-            var info = CreateViewer(options.File);
+            var directoryPath = options.File ?? Environment.CurrentDirectory;
+            var info = CreateViewer(directoryPath);
             if (info is null)
                 return;
 
