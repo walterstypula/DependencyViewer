@@ -10,7 +10,7 @@ namespace DepView
 {
     public sealed class DependencyViewer
     {
-        private readonly Dictionary<string, AssemblyInformation> _asmCollection = new Dictionary<string, AssemblyInformation>();
+        private readonly Dictionary<string, AssemblyInformation> _asmCollection = new();
 
         public DependencyViewer(string root)
         {
@@ -159,7 +159,7 @@ namespace DepView
                         if (found == null)
                         {
                             asm.AllResolved = false;
-                            asm.ChildAssemblies.Add(new AssemblyInformation() { Name = refasm.Name, VersionAsm = refasm.Version?.ToString() ?? string.Empty });
+                            asm.ChildAssemblies.Add(new() { Name = refasm.Name, VersionAsm = refasm.Version?.ToString() ?? string.Empty });
                             continue;
                         }
 
@@ -172,7 +172,7 @@ namespace DepView
                         if (found == null)
                         {
                             asm.AllResolved = false;
-                            asm.ChildAssemblies.Add(new AssemblyInformation() { Name = refasm.Name, VersionAsm = refasm.Version?.ToString() ?? string.Empty });
+                            asm.ChildAssemblies.Add(new() { Name = refasm.Name, VersionAsm = refasm.Version?.ToString() ?? string.Empty });
                             continue;
                         }
 

@@ -52,7 +52,7 @@ namespace DepView.CLI
         {
             try
             {
-                return new DependencyViewer(file);
+                return new(file);
             }
             catch (DependencyViewerException ex)
             {

@@ -19,8 +19,8 @@ namespace DepView
         public string Arch { get; set; } = string.Empty;
         public bool DotNetAssembly { get; set; }
         public AssemblyName[] ReferencedAssembliesRaw { get; set; } = Array.Empty<AssemblyName>();
-        public List<AssemblyInformation> ChildAssemblies { get; } = new List<AssemblyInformation>();
-        public List<AssemblyInformation> ParentAssemblies { get; } = new List<AssemblyInformation>();
+        public List<AssemblyInformation> ChildAssemblies { get; } = new();
+        public List<AssemblyInformation> ParentAssemblies { get; } = new();
         public bool AllResolved { get; set; } = false;
         public bool StronglySigned { get; set; } = false;
         public string ResolvedNote { get; set; } = string.Empty;
