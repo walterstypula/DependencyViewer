@@ -1,6 +1,6 @@
 ﻿namespace DepView
 {
-    public static class Extensions
+    internal static class Extensions
     {
         public static string PadRight(this string str, int length, string padding)
         {
