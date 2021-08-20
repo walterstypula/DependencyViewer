@@ -11,18 +11,41 @@ namespace DepView
     public sealed class DependencyViewer
     {
         private readonly Dictionary<string, AssemblyInformation> _asmCollection = new();
-
+        private readonly string _targetFile = string.Empty;
         public DependencyViewer(string root)
         {
             try
             {
-                string[] dlls = Directory.GetFiles(root, "*.dll", SearchOption.AllDirectories);
-                string[] exes = Directory.GetFiles(root, "*.exe", SearchOption.AllDirectories);
+                var attr = File.GetAttributes(root);
+                var isDirectory = attr.HasFlag(FileAttributes.Directory);
 
-                foreach (var file in dlls.Concat(exes))
+                var directory = !isDirectory ? (new FileInfo(root)?.DirectoryName ?? root) : root;
+                var assemblies = new List<string>();
+
+                string[] dlls = Directory.GetFiles(directory, "*.dll", SearchOption.AllDirectories);
+                string[] exes = Directory.GetFiles(directory, "*.exe", SearchOption.AllDirectories);
+
+                    assemblies.AddRange(dlls);
+                    assemblies.AddRange(exes);
+
+
+                foreach (var file in assemblies)
                     GatherInformation(file);
 
-                FindRelationships();
+                if(!isDirectory)
+                {
+                    _targetFile = root;
+                }
+
+
+                var fileName = isDirectory 
+                    ? null 
+                    : _asmCollection.Values.First(a => $"{a.Location}{a.File}" == _targetFile);
+
+
+#pragma warning disable CS8604 // Possible null reference argument.
+                FindRelationships(fileName);
+#pragma warning restore CS8604 // Possible null reference argument.
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -72,7 +95,12 @@ namespace DepView
             PrintRow(writer, headings, widths);
             PrintHorizontal(writer, widths);
 
-            foreach (var asm in _asmCollection.Values.Where(i => !i.ParentAssemblies.Any() || i.File.EndsWith("exe", StringComparison.InvariantCulture)))
+            var filteredCollection = string.IsNullOrEmpty(_targetFile)
+                                        ? _asmCollection.Values.Where(i => !i.ParentAssemblies.Any() || i.File.EndsWith("exe", StringComparison.InvariantCulture))
+                                        : _asmCollection.Values.Where(i => i.AbsolutePath == _targetFile);
+
+
+            foreach (var asm in filteredCollection)
                 PrintAssembly(writer, asm, 0, widths);
 
             PrintHorizontal(writer, widths);
@@ -86,6 +114,7 @@ namespace DepView
         {
             var info = new AssemblyInformation
             {
+                AbsolutePath = file,
                 Location = Path.GetDirectoryName(file) + Path.DirectorySeparatorChar,
                 File = Path.GetFileName(file),
                 VersionProduct = FileVersionInfo.GetVersionInfo(file).ProductVersion ?? string.Empty,
@@ -134,9 +163,13 @@ namespace DepView
             { }
         }
 
-        private void FindRelationships()
+        private void FindRelationships(AssemblyInformation targetAssemblyInformation)
         {
-            foreach (var asm in _asmCollection.Values)
+            var filtered = targetAssemblyInformation != null
+                ? _asmCollection.Values.Where(x => x == targetAssemblyInformation)
+                : _asmCollection.Values;
+
+            foreach (var asm in filtered)
             {
                 if (asm.ReferencedAssembliesRaw == null || asm.ReferencedAssembliesRaw.Length == 0)
                     continue;
@@ -159,12 +192,15 @@ namespace DepView
                         if (found == null)
                         {
                             asm.AllResolved = false;
-                            asm.ChildAssemblies.Add(new() { Name = refasm.Name, VersionAsm = refasm.Version?.ToString() ?? string.Empty });
+                            asm.ChildAssemblies.AddNotExists(new() { Name = refasm.Name, VersionAsm = refasm.Version?.ToString() ?? string.Empty });
                             continue;
                         }
 
-                        asm.ChildAssemblies.Add(found);
-                        found.ParentAssemblies.Add(asm);
+                        asm.ChildAssemblies.AddNotExists(found);
+                        found.ParentAssemblies.AddNotExists(asm);
+
+                        FindRelationships(found);
+
                     }
                     else
                     {
@@ -172,16 +208,19 @@ namespace DepView
                         if (found == null)
                         {
                             asm.AllResolved = false;
-                            asm.ChildAssemblies.Add(new() { Name = refasm.Name, VersionAsm = refasm.Version?.ToString() ?? string.Empty });
+                            asm.ChildAssemblies.AddNotExists(new() { Name = refasm.Name, VersionAsm = refasm.Version?.ToString() ?? string.Empty });
                             continue;
                         }
 
                         if (refasm.Version?.ToString() != found.VersionAsm)
                             asm.ResolvedNote += refasm.Version?.ToString() + " -> " + found.VersionAsm;
 
-                        asm.ChildAssemblies.Add(found);
-                        found.ParentAssemblies.Add(asm);
+                        asm.ChildAssemblies.AddNotExists(found);
+                        found.ParentAssemblies.AddNotExists(asm);
+                        FindRelationships(found);
                     }
+
+
                 }
             }
         }
@@ -242,5 +281,18 @@ namespace DepView
         }
 
         #endregion Print
+    }
+
+    public static class listextensions
+    {
+        internal static void AddNotExists(this List<AssemblyInformation> list, AssemblyInformation item)
+        {
+            if (list.Any(l=>l.Name == item.Name))
+            {
+                return;
+            }
+
+            list.Add(item);
+        }
     }
 }

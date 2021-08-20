@@ -23,11 +23,7 @@ namespace DepView.CLI
 
         private static void Run(Options options)
         {
-            if (options.File is not null && !Directory.Exists(options.File))
-            {
-                ConsoleExt.WriteError($"Parameter '{options.File}' does not exist or is not a directory.");
-                return;
-            }
+
 
             var directoryPath = options.File ?? Environment.CurrentDirectory;
             var info = CreateViewer(directoryPath);

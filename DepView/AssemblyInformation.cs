@@ -24,5 +24,6 @@ namespace DepView
         public bool AllResolved { get; set; } = false;
         public bool StronglySigned { get; set; } = false;
         public string ResolvedNote { get; set; } = string.Empty;
+        public string AbsolutePath { get; set; } = string.Empty;
     }
 }
